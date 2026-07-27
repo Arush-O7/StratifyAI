@@ -4,10 +4,10 @@ import { Button } from '../components/UI/Button';
 import { Card } from '../components/UI/Card';
 import { Skeleton } from '../components/UI/Skeleton';
 import { Badge } from '../components/UI/Badge';
+import { useToast } from '../context/ToastContext';
 import { motion } from 'framer-motion';
 import {
   SparklesIcon,
-  ArrowPathIcon,
   BriefcaseIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
@@ -31,6 +31,7 @@ interface Roadmap {
 }
 
 const RoadmapView: React.FC = () => {
+  const toast = useToast();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     localStorage.getItem('activeProjectId')
   );
@@ -92,10 +93,11 @@ const RoadmapView: React.FC = () => {
       const response: any = await api.post('/roadmap/generate', payload);
       if (response.success && response.data) {
         setRoadmap(response.data);
+        toast.success('AI Horizons Roadmap formulated!');
       }
     } catch (error: any) {
       console.error('Error generating roadmap:', error);
-      alert(error.message || 'AI Roadmap generation failed');
+      toast.error(error.message || 'AI Roadmap generation failed');
     } finally {
       setGenerating(false);
     }
@@ -107,11 +109,11 @@ const RoadmapView: React.FC = () => {
     try {
       const response: any = await api.post(`/roadmap/${roadmap._id}/convert-to-tasks`);
       if (response.success) {
-        alert('Horizon release items converted to task backlog successfully!');
+        toast.success('Horizon release items converted to task backlog successfully!');
       }
     } catch (error: any) {
       console.error('Error converting to tasks:', error);
-      alert('Conversion failed');
+      toast.error('Conversion failed');
     } finally {
       setLoading(false);
     }
@@ -165,7 +167,7 @@ const RoadmapView: React.FC = () => {
       {/* Control Card */}
       <Card hoverGlow={false} className="p-6 space-y-6">
         <div className="flex items-center space-x-2.5 border-b border-white/5 pb-3">
-          <SparklesIcon className="h-5 w-5 text-indigo-455" />
+          <SparklesIcon className="h-5 w-5 text-indigo-400" />
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Configure Horizon Focus</h3>
         </div>
 
@@ -192,7 +194,7 @@ const RoadmapView: React.FC = () => {
                 <input
                   type="number"
                   value={customStrategic}
-                  onChange={(e) => setCustomStrategic(parseInt(e.target.value))}
+                  onChange={(e) => setCustomStrategic(parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-1.5 bg-slate-950 border border-white/5 rounded-xl text-xs text-white focus:outline-none"
                 />
               </div>
@@ -201,7 +203,7 @@ const RoadmapView: React.FC = () => {
                 <input
                   type="number"
                   value={customCustomer}
-                  onChange={(e) => setCustomCustomer(parseInt(e.target.value))}
+                  onChange={(e) => setCustomCustomer(parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-1.5 bg-slate-950 border border-white/5 rounded-xl text-xs text-white focus:outline-none"
                 />
               </div>
@@ -210,7 +212,7 @@ const RoadmapView: React.FC = () => {
                 <input
                   type="number"
                   value={customMaintenance}
-                  onChange={(e) => setCustomMaintenance(parseInt(e.target.value))}
+                  onChange={(e) => setCustomMaintenance(parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-1.5 bg-slate-950 border border-white/5 rounded-xl text-xs text-white focus:outline-none"
                 />
               </div>

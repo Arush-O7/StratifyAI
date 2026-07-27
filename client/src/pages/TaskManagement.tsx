@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { Button } from '../components/UI/Button';
-import { Card } from '../components/UI/Card';
 import { Skeleton } from '../components/UI/Skeleton';
 import { Badge } from '../components/UI/Badge';
+import { ConfirmModal } from '../components/UI/ConfirmModal';
+import { useToast } from '../context/ToastContext';
 import { motion } from 'framer-motion';
 import {
   PlusIcon,
@@ -26,6 +27,7 @@ interface Task {
 }
 
 const TaskManagement: React.FC = () => {
+  const toast = useToast();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     localStorage.getItem('activeProjectId')
   );
@@ -36,6 +38,7 @@ const TaskManagement: React.FC = () => {
   const [priority, setPriority] = useState<'critical' | 'high' | 'medium' | 'low'>('medium');
   const [category, setCategory] = useState('feature');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   const loadTasks = useCallback(async () => {
     if (!activeProjectId) return;
@@ -47,10 +50,11 @@ const TaskManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
+      toast.error('Failed to load project tasks.');
     } finally {
       setLoading(false);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, toast]);
 
   useEffect(() => {
     loadTasks();
@@ -86,11 +90,12 @@ const TaskManagement: React.FC = () => {
         setPriority('medium');
         setCategory('feature');
         setShowAddForm(false);
+        toast.success('Task created successfully!');
         loadTasks();
       }
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('Failed to create task');
+      toast.error('Failed to create task.');
     } finally {
       setLoading(false);
     }
@@ -101,19 +106,25 @@ const TaskManagement: React.FC = () => {
       const response: any = await api.put(`/tasks/${id}`, { status });
       if (response.success) {
         setTasks(prev => prev.map(t => t._id === id ? { ...t, status: status as any } : t));
+        toast.info('Task status updated.');
       }
     } catch (error) {
       console.error('Error updating task status:', error);
+      toast.error('Failed to update task status.');
     }
   };
 
-  const handleDeleteTask = async (id: string) => {
-    if (!window.confirm('Delete this execution task?')) return;
+  const confirmDeleteTask = async () => {
+    if (!deletingTaskId) return;
     try {
-      await api.delete(`/tasks/${id}`);
-      setTasks(prev => prev.filter(t => t._id !== id));
+      await api.delete(`/tasks/${deletingTaskId}`);
+      setTasks(prev => prev.filter(t => t._id !== deletingTaskId));
+      toast.success('Task deleted successfully.');
     } catch (error) {
       console.error('Error deleting task:', error);
+      toast.error('Failed to delete task.');
+    } finally {
+      setDeletingTaskId(null);
     }
   };
 
@@ -121,7 +132,7 @@ const TaskManagement: React.FC = () => {
     { id: 'todo', title: 'Signals Ingested', icon: InboxIcon, color: 'text-slate-400 bg-slate-500/10' },
     { id: 'in-progress', title: 'Active Dev', icon: ClockIcon, color: 'text-indigo-400 bg-indigo-500/10' },
     { id: 'done', title: 'Completed', icon: CheckCircleIcon, color: 'text-emerald-400 bg-emerald-500/10' },
-    { id: 'blocked', title: 'Blocked', icon: ExclamationCircleIcon, color: 'text-rose-455 bg-rose-500/10' }
+    { id: 'blocked', title: 'Blocked', icon: ExclamationCircleIcon, color: 'text-rose-400 bg-rose-500/10' }
   ];
 
   if (!activeProjectId) {
@@ -285,9 +296,9 @@ const TaskManagement: React.FC = () => {
                               <option value="done">Completed</option>
                               <option value="blocked">Blocked</option>
                             </select>
-                            <button
-                              onClick={() => handleDeleteTask(task._id)}
-                              className="text-slate-500 hover:text-rose-455 p-0.5 rounded hover:bg-rose-500/10 transition"
+                             <button
+                              onClick={() => setDeletingTaskId(task._id)}
+                              className="text-slate-500 hover:text-rose-400 p-0.5 rounded hover:bg-rose-500/10 transition"
                             >
                               <TrashIcon className="h-3.5 w-3.5" />
                             </button>
@@ -302,6 +313,16 @@ const TaskManagement: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Task Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingTaskId}
+        title="Delete Execution Task"
+        message="Are you sure you want to delete this task from the backlog? This action cannot be undone."
+        confirmText="Delete Task"
+        onConfirm={confirmDeleteTask}
+        onCancel={() => setDeletingTaskId(null)}
+      />
     </div>
   );
 };

@@ -549,7 +549,7 @@ const deleteRoadmapItem = async (req, res) => {
       });
     }
 
-    roadmap.items.id(req.params.itemId).remove();
+    roadmap.items.pull(req.params.itemId);
     const updatedRoadmap = await roadmap.save();
 
     res.json({

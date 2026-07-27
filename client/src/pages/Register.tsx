@@ -40,8 +40,8 @@ const Register: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col lg:flex-row relative overflow-hidden bg-grid-glow">
       {/* Background Decorative Glows */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-650/10 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-650/10 blur-[130px] pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-600/10 blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/10 blur-[130px] pointer-events-none" />
 
       {/* Left: Premium Product Presentation */}
       <div className="lg:w-7/12 flex flex-col justify-between p-8 sm:p-16 lg:p-24 z-10">

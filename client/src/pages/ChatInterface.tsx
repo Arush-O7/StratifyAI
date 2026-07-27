@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { Button } from '../components/UI/Button';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../context/ToastContext';
 import {
   PaperAirplaneIcon,
   SparklesIcon,
@@ -33,7 +33,7 @@ const ChatInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   
-  // Task Enhancer states
+  const toast = useToast();
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDesc, setTaskDesc] = useState('');
   const [enhancing, setEnhancing] = useState(false);
@@ -152,10 +152,11 @@ const ChatInterface: React.FC = () => {
         
         setTaskTitle('');
         setTaskDesc('');
+        toast.success('Task enhanced with acceptance criteria!');
       }
     } catch (error) {
       console.error('Error enhancing task:', error);
-      alert('AI task enhancement failed');
+      toast.error('AI task enhancement failed.');
     } finally {
       setEnhancing(false);
     }
@@ -280,7 +281,7 @@ const ChatInterface: React.FC = () => {
                     <div
                       className={`max-w-[85%] px-4 py-3 rounded-2xl text-xs leading-relaxed ${
                         isUser
-                          ? 'bg-indigo-650 text-white rounded-tr-none border border-indigo-600/30 shadow-md shadow-indigo-650/10'
+                          ? 'bg-indigo-600 text-white rounded-tr-none border border-indigo-600/30 shadow-md shadow-indigo-600/10'
                           : 'bg-slate-900/60 border border-white/5 text-slate-200 rounded-tl-none shadow-sm'
                       }`}
                     >
@@ -293,7 +294,7 @@ const ChatInterface: React.FC = () => {
               })}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-slate-900/40 border border-white/5 text-slate-550 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm flex items-center space-x-2 text-2xs font-bold">
+                  <div className="bg-slate-900/40 border border-white/5 text-slate-400 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm flex items-center space-x-2 text-2xs font-bold">
                     <ArrowPathIcon className="h-4 w-4 animate-spin text-indigo-400" />
                     <span>Aura Copilot is computing...</span>
                   </div>
@@ -313,12 +314,12 @@ const ChatInterface: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Type project strategic query..."
-            className="flex-1 px-4 py-2.5 bg-slate-950/60 border border-white/5 rounded-xl text-xs text-white placeholder-slate-550 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+            className="flex-1 px-4 py-2.5 bg-slate-950/60 border border-white/5 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
           />
           <button
             type="submit"
             disabled={loading || !inputText.trim()}
-            className="p-2.5 bg-indigo-650 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-xl transition cursor-pointer"
+            className="p-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl transition cursor-pointer"
           >
             <PaperAirplaneIcon className="h-4.5 w-4.5" />
           </button>

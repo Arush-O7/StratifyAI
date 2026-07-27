@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import { Button } from '../components/UI/Button';
 import { Card } from '../components/UI/Card';
-import { Skeleton } from '../components/UI/Skeleton';
 import { Badge } from '../components/UI/Badge';
+import { ConfirmModal } from '../components/UI/ConfirmModal';
+import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DocumentArrowUpIcon,
@@ -12,7 +13,8 @@ import {
   ArrowPathIcon,
   SparklesIcon,
   EyeIcon,
-  XMarkIcon
+  XMarkIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
@@ -45,6 +47,7 @@ const COLORS = {
 };
 
 const FeedbackManagement: React.FC = () => {
+  const toast = useToast();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     localStorage.getItem('activeProjectId')
   );
@@ -54,10 +57,12 @@ const FeedbackManagement: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedItem, setSelectedItem] = useState<FeedbackItem | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Filters
+  // Filters & Search
   const [sentimentFilter, setSentimentFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadFeedback = useCallback(async () => {
     if (!activeProjectId) return;
@@ -69,10 +74,11 @@ const FeedbackManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading feedback:', error);
+      toast.error('Failed to load user signals.');
     } finally {
       setLoading(false);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, toast]);
 
   useEffect(() => {
     loadFeedback();
@@ -100,11 +106,12 @@ const FeedbackManagement: React.FC = () => {
       });
       if (response.success) {
         setInputText('');
+        toast.success('User signal ingested and analyzed!');
         loadFeedback();
       }
     } catch (error) {
       console.error('Error adding feedback:', error);
-      alert('Failed to analyze feedback');
+      toast.error('Failed to analyze feedback signal.');
     } finally {
       setLoading(false);
     }
@@ -125,35 +132,43 @@ const FeedbackManagement: React.FC = () => {
       });
       if (response.success) {
         setSelectedFile(null);
+        toast.success('Document parsed and signals extracted!');
         loadFeedback();
       }
     } catch (error) {
       console.error('Error uploading feedback document:', error);
-      alert('Failed to parse and upload feedback document');
+      toast.error('Failed to parse and upload feedback document.');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this user signal?')) return;
+  const confirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await api.delete(`/feedback/${id}`);
-      setFeedbackList(feedbackList.filter(item => item._id !== id));
-      if (selectedItem?._id === id) setSelectedItem(null);
+      await api.delete(`/feedback/${deletingId}`);
+      setFeedbackList(prev => prev.filter(item => item._id !== deletingId));
+      if (selectedItem?._id === deletingId) setSelectedItem(null);
+      toast.success('User signal deleted.');
     } catch (error) {
       console.error('Error deleting feedback:', error);
+      toast.error('Failed to delete user signal.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  // Filtered List
-  const filteredFeedback = feedbackList.filter(item => {
-    const matchSentiment = sentimentFilter === 'all' || item.sentiment === sentimentFilter;
-    const matchCategory = categoryFilter === 'all' || item.category === categoryFilter;
-    return matchSentiment && matchCategory;
-  });
+  // Filtered List with Search
+  const filteredFeedback = useMemo(() => {
+    return feedbackList.filter(item => {
+      const matchSentiment = sentimentFilter === 'all' || item.sentiment === sentimentFilter;
+      const matchCategory = categoryFilter === 'all' || item.category === categoryFilter;
+      const matchSearch = !searchQuery.trim() || item.content.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchSentiment && matchCategory && matchSearch;
+    });
+  }, [feedbackList, sentimentFilter, categoryFilter, searchQuery]);
 
-  const getSentimentChartData = () => {
+  const sentimentData = useMemo(() => {
     const counts = { positive: 0, negative: 0, neutral: 0 };
     feedbackList.forEach(item => {
       if (counts[item.sentiment] !== undefined) {
@@ -165,21 +180,18 @@ const FeedbackManagement: React.FC = () => {
       value: counts[key as keyof typeof counts],
       color: COLORS[key as keyof typeof counts]
     })).filter(d => d.value > 0);
-  };
+  }, [feedbackList]);
 
-  const getCategoryChartData = () => {
+  const categoryData = useMemo(() => {
     const counts: { [key: string]: number } = {};
     feedbackList.forEach(item => {
       counts[item.category] = (counts[item.category] || 0) + 1;
     });
     return Object.keys(counts).map(key => ({
-      name: key.replace('-', ' ').toUpperCase(),
+      name: key.replace(/-/g, ' ').toUpperCase(),
       value: counts[key]
     }));
-  };
-
-  const sentimentData = getSentimentChartData();
-  const categoryData = getCategoryChartData();
+  }, [feedbackList]);
 
   if (!activeProjectId) {
     return (
@@ -323,7 +335,19 @@ const FeedbackManagement: React.FC = () => {
         <div className="px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white/2">
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">User Signals Log ({filteredFeedback.length})</h3>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Input */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search signals..."
+                className="bg-slate-950/80 border border-white/5 hover:border-indigo-500/30 rounded-xl pl-8 pr-3 py-1.5 text-2xs font-bold text-slate-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <MagnifyingGlassIcon className="h-3.5 w-3.5 text-slate-500 absolute left-2.5 top-2.5" />
+            </div>
+
             {/* Filter Sentiment */}
             <select
               value={sentimentFilter}
@@ -353,7 +377,7 @@ const FeedbackManagement: React.FC = () => {
 
         {filteredFeedback.length === 0 ? (
           <div className="text-center py-16 text-slate-500 text-xs font-semibold">
-            No signals match the selection filters.
+            No signals match the selection filters or search.
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
@@ -384,13 +408,13 @@ const FeedbackManagement: React.FC = () => {
                     <td className="p-4 pr-6 text-right space-x-2">
                       <button
                         onClick={() => setSelectedItem(item)}
-                        className="p-1 hover:bg-indigo-500/10 rounded-lg text-slate-450 hover:text-indigo-400 transition"
+                        className="p-1 hover:bg-indigo-500/10 rounded-lg text-slate-400 hover:text-indigo-400 transition"
                       >
                         <EyeIcon className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(item._id)}
-                        className="p-1 hover:bg-rose-500/10 rounded-lg text-slate-450 hover:text-rose-400 transition"
+                        onClick={() => setDeletingId(item._id)}
+                        className="p-1 hover:bg-rose-500/10 rounded-lg text-slate-400 hover:text-rose-400 transition"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -468,6 +492,16 @@ const FeedbackManagement: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingId}
+        title="Delete User Signal"
+        message="Are you sure you want to delete this user signal log? This action cannot be undone."
+        confirmText="Delete Signal"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeletingId(null)}
+      />
     </div>
   );
 };

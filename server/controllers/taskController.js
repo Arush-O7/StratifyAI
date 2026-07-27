@@ -418,7 +418,7 @@ const removeDependency = async (req, res) => {
       });
     }
 
-    task.dependencies.id(req.params.dependencyId).remove();
+    task.dependencies.pull(req.params.dependencyId);
     const updatedTask = await task.save();
 
     res.json({

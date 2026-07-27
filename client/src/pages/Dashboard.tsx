@@ -6,6 +6,7 @@ import { Card } from '../components/UI/Card';
 import { Skeleton } from '../components/UI/Skeleton';
 import { Badge } from '../components/UI/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../context/ToastContext';
 import {
   FolderIcon,
   MapIcon,
@@ -14,7 +15,8 @@ import {
   PlusIcon,
   XMarkIcon,
   CheckIcon,
-  ArrowUpTrayIcon
+  ArrowUpTrayIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 
 interface DashboardStats {
@@ -33,6 +35,7 @@ interface Project {
 }
 
 const Dashboard: React.FC = () => {
+  const toast = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     totalProjects: 0,
     activeRoadmaps: 0,
@@ -54,6 +57,31 @@ const Dashboard: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
 
+  const handleExportCSV = () => {
+    if (projects.length === 0) {
+      toast.info('No projects available to export.');
+      return;
+    }
+    const headers = ['ID', 'Name', 'Description', 'Created At'];
+    const rows = projects.map((p) => [
+      `"${p._id}"`,
+      `"${p.name.replace(/"/g, '""')}"`,
+      `"${p.description.replace(/"/g, '""')}"`,
+      `"${new Date(p.createdAt).toLocaleDateString()}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `stratify_projects_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Exported project workspace data to CSV!');
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -72,27 +100,32 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError('');
 
-      const [projectsResponse, feedbackResponse, tasksResponse, roadmapResponse]: any[] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/projects'),
         api.get('/feedback'),
         api.get('/tasks'),
         api.get('/roadmap'),
       ]);
 
-      if (projectsResponse.success && projectsResponse.data) {
-        setProjects(projectsResponse.data);
+      const projectsRes: any = results[0].status === 'fulfilled' ? results[0].value : null;
+      const feedbackRes: any = results[1].status === 'fulfilled' ? results[1].value : null;
+      const tasksRes: any = results[2].status === 'fulfilled' ? results[2].value : null;
+      const roadmapRes: any = results[3].status === 'fulfilled' ? results[3].value : null;
+
+      if (projectsRes && projectsRes.success && projectsRes.data) {
+        setProjects(projectsRes.data);
         
         // Auto-select first project if none is selected
-        if (projectsResponse.data.length > 0 && !localStorage.getItem('activeProjectId')) {
-          selectProject(projectsResponse.data[0]._id, projectsResponse.data[0].name);
+        if (projectsRes.data.length > 0 && !localStorage.getItem('activeProjectId')) {
+          selectProject(projectsRes.data[0]._id, projectsRes.data[0].name);
         }
       }
 
       setStats({
-        totalProjects: projectsResponse.data?.length || 0,
-        feedbackItems: feedbackResponse.data?.length || 0,
-        pendingTasks: tasksResponse.data?.length || 0,
-        activeRoadmaps: roadmapResponse.data?.length || 0,
+        totalProjects: projectsRes?.data?.length || 0,
+        feedbackItems: feedbackRes?.data?.length || 0,
+        pendingTasks: tasksRes?.data?.length || 0,
+        activeRoadmaps: roadmapRes?.data?.length || 0,
       });
     } catch (err: any) {
       console.error('Error loading dashboard data:', err);
@@ -148,11 +181,12 @@ const Dashboard: React.FC = () => {
         setSelectedFile(null);
         setShowModal(false);
         
+        toast.success('Pulse Hub workspace created successfully!');
         loadDashboardData();
       }
     } catch (err: any) {
       console.error('Error creating project:', err);
-      alert(err.message || 'Failed to create workspace');
+      toast.error(err.message || 'Failed to create workspace');
     } finally {
       setCreating(false);
     }
@@ -197,13 +231,19 @@ const Dashboard: React.FC = () => {
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Pulse Hub Overview</h1>
           <p className="text-slate-400 text-xs mt-1.5">
-            Configure collaborative workspaces and synthesize user signals intoリリース plans.
+            Configure collaborative workspaces and synthesize user signals into release plans.
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="self-start">
-          <PlusIcon className="h-4.5 w-4.5 mr-2" />
-          Create Pulse Hub
-        </Button>
+        <div className="flex items-center space-x-3 self-start">
+          <Button variant="secondary" onClick={handleExportCSV}>
+            <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button onClick={() => setShowModal(true)}>
+            <PlusIcon className="h-4.5 w-4.5 mr-2" />
+            Create Pulse Hub
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -397,7 +437,7 @@ const Dashboard: React.FC = () => {
                   {selectedFile ? (
                     <div className="bg-white/5 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between text-slate-300 text-xs font-semibold">
                       <span className="truncate max-w-[200px]">{selectedFile.name}</span>
-                      <button type="button" onClick={() => setSelectedFile(null)} className="text-rose-455 font-bold hover:text-rose-400">
+                      <button type="button" onClick={() => setSelectedFile(null)} className="text-rose-400 font-bold hover:text-rose-300">
                         Remove
                       </button>
                     </div>

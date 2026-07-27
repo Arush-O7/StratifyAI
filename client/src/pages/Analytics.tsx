@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
-import { Button } from '../components/UI/Button';
 import { Card } from '../components/UI/Card';
 import { Skeleton } from '../components/UI/Skeleton';
-import { Badge } from '../components/UI/Badge';
 import {
   ChartBarIcon,
   SparklesIcon,
@@ -183,7 +181,7 @@ const Analytics: React.FC = () => {
               <div>
                 <span className="text-3xs font-extrabold text-slate-500 uppercase tracking-widest">AI Inferences Engine</span>
                 <div className="flex items-baseline space-x-2 mt-2">
-                  <span className="text-xl font-bold text-emerald-450 uppercase tracking-wider">Aura Sync Active</span>
+                  <span className="text-xl font-bold text-emerald-400 uppercase tracking-wider">Aura Sync Active</span>
                 </div>
               </div>
               <div className="text-3xs text-slate-500 font-extrabold uppercase tracking-widest flex items-center space-x-1.5">

@@ -32,9 +32,6 @@ const Layout: React.FC = () => {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     localStorage.getItem('activeProjectId')
   );
-  const [activeProjectName, setActiveProjectName] = useState<string | null>(
-    localStorage.getItem('activeProjectName')
-  );
   
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -66,10 +63,8 @@ const Layout: React.FC = () => {
   useEffect(() => {
     const checkStorage = () => {
       const storedId = localStorage.getItem('activeProjectId');
-      const storedName = localStorage.getItem('activeProjectName');
       if (storedId !== activeProjectId) {
         setActiveProjectId(storedId);
-        setActiveProjectName(storedName);
       }
     };
 
@@ -86,7 +81,6 @@ const Layout: React.FC = () => {
     localStorage.setItem('activeProjectId', id);
     localStorage.setItem('activeProjectName', name);
     setActiveProjectId(id);
-    setActiveProjectName(name);
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -101,8 +95,8 @@ const Layout: React.FC = () => {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex relative overflow-hidden bg-grid-glow">
         
         {/* Decorative background glows */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-650/10 blur-[150px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-650/10 blur-[150px] pointer-events-none" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/10 blur-[150px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/10 blur-[150px] pointer-events-none" />
 
         {/* Mobile sidebar */}
         <AnimatePresence>

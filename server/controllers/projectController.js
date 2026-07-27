@@ -409,7 +409,7 @@ const deleteGoal = async (req, res) => {
       });
     }
 
-    project.goals.id(req.params.goalId).remove();
+    project.goals.pull(req.params.goalId);
     const updatedProject = await project.save();
 
     res.json({
